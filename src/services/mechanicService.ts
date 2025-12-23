@@ -121,9 +121,10 @@ export const searchShops = (
 };
 
 export const getFeaturedShopIds = (shops: ShopWithStats[]): string[] => {
-  return shops
+  return [...shops]
     .filter(shop => shop.review_count > 0)
-    .slice(0, 3)
+    .sort((a, b) => b.average_rating - a.average_rating)
+    .slice(0, 5)
     .map(shop => shop.shop_id);
 };
 
