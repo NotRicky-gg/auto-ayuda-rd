@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
@@ -53,6 +53,13 @@ const OwnerDashboard = () => {
     queryFn: () => fetchOwnedShops(user!.id),
     enabled: !!user?.id && isOwner === true,
   });
+
+  // Set initial selected shop when ownedShops loads
+  useEffect(() => {
+    if (ownedShops.length > 0 && !selectedShopId) {
+      setSelectedShopId(ownedShops[0].shop_id);
+    }
+  }, [ownedShops, selectedShopId]);
 
   // Fetch reviews for selected shop
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
