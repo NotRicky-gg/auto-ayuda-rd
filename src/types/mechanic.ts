@@ -19,6 +19,8 @@ export interface Review {
   rating: number;
   comment: string;
   created_at: string;
+  has_been_edited?: boolean;
+  updated_at?: string;
 }
 
 export interface ReviewReply {

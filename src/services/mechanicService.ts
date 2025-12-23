@@ -303,6 +303,33 @@ export const fetchUserReviews = async (userId: string): Promise<(Review & { shop
   }));
 };
 
+// Update a review (only allowed once)
+export const updateReview = async (
+  reviewId: string,
+  rating: number,
+  comment: string
+): Promise<Review | null> => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .update({
+      rating,
+      comment,
+      has_been_edited: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', reviewId)
+    .eq('has_been_edited', false) // Only allow if not already edited
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating review:', error);
+    throw error;
+  }
+
+  return data;
+};
+
 // ==================== FAVORITES ====================
 
 // Check if a shop is favorited by user

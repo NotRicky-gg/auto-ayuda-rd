@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { StarRating } from '@/components/StarRating';
 import { ShopCard } from '@/components/ShopCard';
 import { ShopDetailModal } from '@/components/ShopDetailModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchUserReviews, fetchUserFavorites } from '@/services/mechanicService';
+import { fetchUserReviews, fetchUserFavorites, updateReview } from '@/services/mechanicService';
 import type { Review, ShopRating, ShopWithStats } from '@/types/mechanic';
-import { User, MessageSquare, Star, MapPin, Calendar, Heart } from 'lucide-react';
+import { User, MessageSquare, Star, MapPin, Calendar, Heart, Pencil, X, Check } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -28,6 +31,11 @@ import {
 const UserProfile = () => {
   const { user, loading: authLoading } = useAuth();
   const [selectedShop, setSelectedShop] = useState<ShopWithStats | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState(0);
+  const [editComment, setEditComment] = useState('');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch user's reviews
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
@@ -42,6 +50,60 @@ const UserProfile = () => {
     queryFn: () => fetchUserFavorites(user!.id),
     enabled: !!user?.id,
   });
+
+  // Mutation for updating reviews
+  const updateReviewMutation = useMutation({
+    mutationFn: ({ reviewId, rating, comment }: { reviewId: string; rating: number; comment: string }) =>
+      updateReview(reviewId, rating, comment),
+    onSuccess: () => {
+      toast({
+        title: '¡Reseña actualizada!',
+        description: 'Tu reseña ha sido modificada exitosamente.',
+      });
+      setEditingReviewId(null);
+      queryClient.invalidateQueries({ queryKey: ['userReviews', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['shopRatings'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar la reseña. Intenta de nuevo.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleStartEdit = (review: Review) => {
+    setEditingReviewId(review.id);
+    setEditRating(review.rating);
+    setEditComment(review.comment);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null);
+    setEditRating(0);
+    setEditComment('');
+  };
+
+  const handleSaveEdit = (reviewId: string) => {
+    if (editRating === 0) {
+      toast({
+        title: 'Selecciona una calificación',
+        description: 'Por favor selecciona al menos una estrella.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!editComment.trim()) {
+      toast({
+        title: 'Escribe un comentario',
+        description: 'Por favor comparte tu experiencia.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateReviewMutation.mutate({ reviewId, rating: editRating, comment: editComment });
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-DO', {
@@ -235,7 +297,7 @@ const UserProfile = () => {
                               <div className="h-10 w-10 rounded-lg bg-navy flex items-center justify-center">
                                 <MapPin className="h-5 w-5 text-orange" />
                               </div>
-                              <div>
+                              <div className="flex-1">
                                 <h4 className="font-semibold text-foreground uppercase">
                                   {review.shop.shop_name}
                                 </h4>
@@ -243,19 +305,94 @@ const UserProfile = () => {
                                   {review.shop.city}
                                 </p>
                               </div>
+                              {/* Edit button - only show if not already edited */}
+                              {!review.has_been_edited && editingReviewId !== review.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleStartEdit(review)}
+                                  className="gap-1 text-muted-foreground hover:text-orange"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  Editar
+                                </Button>
+                              )}
+                              {review.has_been_edited && (
+                                <span className="text-xs text-muted-foreground italic">
+                                  Editada
+                                </span>
+                              )}
                             </div>
                           )}
 
-                          {/* Review Content */}
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <StarRating value={review.rating} readonly size="sm" />
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {formatDate(review.created_at)}
+                          {/* Edit Mode */}
+                          {editingReviewId === review.id ? (
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-foreground mb-2">
+                                  Calificación
+                                </label>
+                                <StarRating value={editRating} onChange={setEditRating} size="md" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-foreground mb-2">
+                                  Comentario
+                                </label>
+                                <Textarea
+                                  value={editComment}
+                                  onChange={(e) => setEditComment(e.target.value)}
+                                  placeholder="Cuéntanos tu experiencia..."
+                                  rows={4}
+                                  maxLength={500}
+                                  className="resize-none"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1 text-right">
+                                  {editComment.length}/500 caracteres
+                                </p>
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleCancelEdit}
+                                  disabled={updateReviewMutation.isPending}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveEdit(review.id)}
+                                  disabled={updateReviewMutation.isPending}
+                                  className="bg-orange hover:bg-orange-light text-white"
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  {updateReviewMutation.isPending ? 'Guardando...' : 'Guardar'}
+                                </Button>
+                              </div>
+                              <p className="text-xs text-amber-600 dark:text-amber-400">
+                                ⚠️ Solo puedes editar tu reseña una vez. Asegúrate de que esté correcta antes de guardar.
                               </p>
                             </div>
-                          </div>
-                          <p className="text-foreground leading-relaxed">{review.comment}</p>
+                          ) : (
+                            <>
+                              {/* Review Content */}
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <StarRating value={review.rating} readonly size="sm" />
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {formatDate(review.created_at)}
+                                    {review.updated_at && (
+                                      <span className="ml-2 italic">
+                                        (editada el {formatDate(review.updated_at)})
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-foreground leading-relaxed">{review.comment}</p>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
