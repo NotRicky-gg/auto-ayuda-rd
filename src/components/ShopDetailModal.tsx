@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus } from 'lucide-react';
+import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus, Phone, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -98,7 +98,21 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
     });
   };
 
+  // Generate Google Maps embed URL from coordinates or address
+  const getMapEmbedUrl = () => {
+    if (shop?.latitude && shop?.longitude) {
+      return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d${shop.longitude}!3d${shop.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zM!5e0!3m2!1ses!2sdo!4v1234567890`;
+    }
+    if (shop?.address && shop?.city) {
+      const query = encodeURIComponent(`${shop.address}, ${shop.city}, República Dominicana`);
+      return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d0!3d0!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s${query}!5e0!3m2!1ses!2sdo`;
+    }
+    return null;
+  };
+
   if (!shop) return null;
+
+  const mapEmbedUrl = getMapEmbedUrl();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -110,38 +124,89 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Shop Info */}
-          <div className="bg-navy rounded-xl p-6 text-white">
-            <div className="flex items-center gap-3 mb-4">
-              <StarRating value={shop.average_rating} readonly size="md" />
-              <span className="font-semibold text-lg">
-                {shop.average_rating > 0 ? shop.average_rating.toFixed(1) : 'Sin calificación'}
-              </span>
-              <span className="text-gray-400 text-sm">
-                ({shop.review_count} {shop.review_count === 1 ? 'reseña' : 'reseñas'})
-              </span>
-            </div>
+          {/* Rating Summary */}
+          <div className="flex items-center gap-3">
+            <StarRating value={shop.average_rating} readonly size="md" />
+            <span className="font-semibold text-lg text-foreground">
+              {shop.average_rating > 0 ? shop.average_rating.toFixed(1) : 'Sin calificación'}
+            </span>
+            <span className="text-muted-foreground text-sm">
+              ({shop.review_count} {shop.review_count === 1 ? 'reseña' : 'reseñas'})
+            </span>
+          </div>
 
-            <div className="flex items-start gap-3 text-gray-300">
+          {/* Shop Info Card */}
+          <div className="bg-navy rounded-xl p-6 text-white space-y-4">
+            {/* Address */}
+            <div className="flex items-start gap-3">
               <MapPin className="h-5 w-5 text-orange shrink-0 mt-0.5" />
               <div>
+                <p className="text-sm text-gray-400 mb-1">Dirección</p>
                 <p>{shop.address}</p>
-                <p className="font-medium text-white">{shop.city}</p>
+                <p className="font-medium">{shop.city}</p>
               </div>
             </div>
 
+            {/* Phone */}
+            {shop.phone && (
+              <div className="flex items-start gap-3">
+                <Phone className="h-5 w-5 text-orange shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Teléfono</p>
+                  <a 
+                    href={`tel:${shop.phone}`} 
+                    className="hover:text-orange transition-colors"
+                  >
+                    {shop.phone}
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* Schedule */}
+            {shop.schedule && (
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-orange shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Horario</p>
+                  <p className="whitespace-pre-line">{shop.schedule}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Google Maps Link */}
             {shop.google_maps_url && (
               <a
                 href={shop.google_maps_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-orange hover:text-orange-light font-medium mt-4 transition-colors"
+                className="inline-flex items-center gap-2 text-orange hover:text-orange-light font-medium transition-colors"
               >
                 <ExternalLink className="h-4 w-4" />
                 Ver en Google Maps
               </a>
             )}
           </div>
+
+          {/* Map Embed */}
+          {(shop.latitude && shop.longitude) || (shop.address && shop.city) ? (
+            <div className="rounded-xl overflow-hidden border border-border h-[200px]">
+              <iframe
+                src={`https://maps.google.com/maps?q=${
+                  shop.latitude && shop.longitude 
+                    ? `${shop.latitude},${shop.longitude}` 
+                    : encodeURIComponent(`${shop.address}, ${shop.city}, República Dominicana`)
+                }&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title={`Ubicación de ${shop.shop_name}`}
+              />
+            </div>
+          ) : null}
 
           {/* Review Form */}
           <div className="bg-muted rounded-xl p-6">
