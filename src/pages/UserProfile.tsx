@@ -1,0 +1,192 @@
+import { Navigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
+import { StarRating } from '@/components/StarRating';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchUserReviews } from '@/services/mechanicService';
+import type { Review, ShopRating } from '@/types/mechanic';
+import { User, MessageSquare, Star, MapPin, Calendar } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+
+const UserProfile = () => {
+  const { user, loading: authLoading } = useAuth();
+
+  // Fetch user's reviews
+  const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
+    queryKey: ['userReviews', user?.id],
+    queryFn: () => fetchUserReviews(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-DO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  // Calculate stats
+  const totalReviews = reviews.length;
+  const averageRatingGiven = totalReviews > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
+    : 0;
+
+  // Loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Cargando...</div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Not logged in
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+
+      <main className="flex-1">
+        <div className="container py-8">
+          {/* Profile Header */}
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+                {/* Avatar */}
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={user.user_metadata?.avatar_url} alt={userName} />
+                  <AvatarFallback className="bg-orange text-white text-3xl">
+                    {userInitial}
+                  </AvatarFallback>
+                </Avatar>
+
+                {/* User Info */}
+                <div className="flex-1 text-center md:text-left">
+                  <h1 className="text-2xl font-bold text-foreground mb-1">{userName}</h1>
+                  <p className="text-muted-foreground mb-4">{user.email}</p>
+                  
+                  <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      Miembro desde {formatDate(user.created_at || new Date().toISOString())}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex gap-6">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-foreground">{totalReviews}</p>
+                    <p className="text-sm text-muted-foreground">Reseñas</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Star className="h-5 w-5 fill-orange text-orange" />
+                      <span className="text-3xl font-bold text-foreground">
+                        {averageRatingGiven > 0 ? averageRatingGiven.toFixed(1) : '-'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Promedio dado</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reviews Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-orange" />
+                Mis Reseñas
+              </CardTitle>
+              <CardDescription>
+                Todas las reseñas que has dejado en talleres
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {reviewsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="border border-border rounded-lg p-4 animate-pulse">
+                      <div className="h-5 bg-muted rounded w-1/3 mb-2" />
+                      <div className="h-4 bg-muted rounded w-full mb-2" />
+                      <div className="h-4 bg-muted rounded w-2/3" />
+                    </div>
+                  ))}
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Aún no has dejado reseñas
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Visita talleres y comparte tu experiencia con otros usuarios.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.map((review: Review & { shop?: ShopRating }) => (
+                    <div key={review.id} className="border border-border rounded-lg p-5 hover:border-orange/30 transition-colors">
+                      {/* Shop Info */}
+                      {review.shop && (
+                        <div className="flex items-center gap-3 mb-3 pb-3 border-b border-border">
+                          <div className="h-10 w-10 rounded-lg bg-navy flex items-center justify-center">
+                            <MapPin className="h-5 w-5 text-orange" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-foreground uppercase">
+                              {review.shop.shop_name}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {review.shop.city}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Review Content */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <StarRating value={review.rating} readonly size="sm" />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {formatDate(review.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-foreground leading-relaxed">{review.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default UserProfile;

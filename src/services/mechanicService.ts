@@ -270,3 +270,34 @@ export const updateReviewReply = async (
 
   return data;
 };
+
+// Fetch reviews submitted by a user with shop info
+export const fetchUserReviews = async (userId: string): Promise<(Review & { shop?: ShopRating })[]> => {
+  const { data: reviews, error: reviewsError } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (reviewsError) {
+    console.error('Error fetching user reviews:', reviewsError);
+    return [];
+  }
+
+  if (!reviews || reviews.length === 0) return [];
+
+  // Get unique shop IDs
+  const shopIds = [...new Set(reviews.map(r => r.shop_id))];
+
+  // Fetch shop details
+  const { data: shops } = await supabase
+    .from('shop_ratings')
+    .select('*')
+    .in('shop_id', shopIds);
+
+  // Merge shop info with reviews
+  return reviews.map(review => ({
+    ...review,
+    shop: shops?.find(s => s.shop_id === review.shop_id),
+  }));
+};
