@@ -1,4 +1,4 @@
-import { Download, X, Smartphone } from 'lucide-react';
+import { Download, Smartphone } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -7,11 +7,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useState } from 'react';
 
 interface PWAInstallPromptProps {
   isOpen: boolean;
   onClose: () => void;
   onInstall: () => void;
+  onDismissPermanently: () => void;
   isInstalling?: boolean;
 }
 
@@ -19,18 +22,28 @@ export const PWAInstallPrompt = ({
   isOpen, 
   onClose, 
   onInstall,
+  onDismissPermanently,
   isInstalling = false 
 }: PWAInstallPromptProps) => {
+  const [dontAskAgain, setDontAskAgain] = useState(false);
+
+  const handleClose = () => {
+    if (dontAskAgain) {
+      onDismissPermanently();
+    }
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-orange/10 flex items-center justify-center">
             <Smartphone className="h-8 w-8 text-orange" />
           </div>
-          <DialogTitle className="text-xl">¡Instala Chequéalo RD!</DialogTitle>
-          <DialogDescription className="text-base">
-            Agrega la app a tu pantalla de inicio para acceder más rápido y recibir una mejor experiencia.
+          <DialogTitle className="text-xl text-foreground">¡Instala Chequéalo RD!</DialogTitle>
+          <DialogDescription className="text-base text-muted-foreground">
+            Agrega la app a tu pantalla de inicio para acceder más rápido y tener una mejor experiencia.
           </DialogDescription>
         </DialogHeader>
 
@@ -49,22 +62,36 @@ export const PWAInstallPrompt = ({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 mt-6">
+        <div className="flex flex-col gap-3 mt-6">
           <Button 
             onClick={onInstall} 
             disabled={isInstalling}
             className="w-full bg-orange hover:bg-orange-light text-white font-semibold h-12"
           >
             <Download className="h-5 w-5 mr-2" />
-            {isInstalling ? 'Instalando...' : 'Instalar Ahora'}
+            {isInstalling ? 'Instalando...' : 'Sí, Instalar Ahora'}
           </Button>
           <Button 
-            variant="ghost" 
-            onClick={onClose}
-            className="w-full"
+            variant="outline" 
+            onClick={handleClose}
+            className="w-full border-border text-foreground hover:bg-muted"
           >
-            Quizás después
+            No, gracias
           </Button>
+        </div>
+
+        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+          <Checkbox 
+            id="dont-ask" 
+            checked={dontAskAgain}
+            onCheckedChange={(checked) => setDontAskAgain(checked === true)}
+          />
+          <label 
+            htmlFor="dont-ask" 
+            className="text-sm text-muted-foreground cursor-pointer"
+          >
+            No volver a preguntarme
+          </label>
         </div>
       </DialogContent>
     </Dialog>

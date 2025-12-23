@@ -26,7 +26,7 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
+  const { canShowPrompt, promptInstall, dismissPermanently } = usePWAInstall();
 
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['shopReviewsWithReplies', shop?.shop_id],
@@ -56,8 +56,8 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
       queryClient.invalidateQueries({ queryKey: ['existingReview', shop?.shop_id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['shopRatings'] });
       
-      // Show PWA install prompt if available and not already installed
-      if (isInstallable && !isInstalled) {
+      // Show PWA install prompt if available
+      if (canShowPrompt) {
         setTimeout(() => {
           setShowPWAPrompt(true);
         }, 1000);
@@ -429,6 +429,7 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
       <PWAInstallPrompt
         isOpen={showPWAPrompt}
         onClose={() => setShowPWAPrompt(false)}
+        onDismissPermanently={dismissPermanently}
         onInstall={async () => {
           const installed = await promptInstall();
           if (installed) {
