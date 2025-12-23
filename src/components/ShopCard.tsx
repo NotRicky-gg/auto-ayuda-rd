@@ -1,6 +1,7 @@
 import { Star, MapPin, Phone, Clock, ChevronRight, Award, ExternalLink, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { FavoriteButton } from '@/components/FavoriteButton';
+import { ShareButton } from '@/components/ShareButton';
 import type { ShopWithStats } from '@/types/mechanic';
 
 interface ShopCardProps {
@@ -52,9 +53,12 @@ export const ShopCard = ({ shop, isFeatured, onClick, showFavorite = true }: Sho
             <h3 className="text-lg font-bold text-foreground uppercase tracking-wide">
               {shop.shop_name}
             </h3>
-            {showFavorite && (
-              <FavoriteButton shopId={shop.shop_id} size="sm" />
-            )}
+            <div className="flex items-center gap-1">
+              <ShareButton shopName={shop.shop_name} shopCity={shop.city} size="sm" />
+              {showFavorite && (
+                <FavoriteButton shopId={shop.shop_id} size="sm" />
+              )}
+            </div>
           </div>
 
           {/* Rating */}

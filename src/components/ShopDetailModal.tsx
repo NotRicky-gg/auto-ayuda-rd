@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus, Phone, Clock } from 'lucide-react';
+import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus, Phone, Clock, Share2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -129,9 +129,22 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold uppercase tracking-wide text-foreground pr-8">
-            {shop.shop_name}
-          </DialogTitle>
+          <div className="flex items-start justify-between pr-8">
+            <DialogTitle className="text-2xl font-bold uppercase tracking-wide text-foreground">
+              {shop.shop_name}
+            </DialogTitle>
+            <button
+              onClick={() => {
+                const message = `¡Mira este taller mecánico! 🔧\n\n*${shop.shop_name}*\n📍 ${shop.city}\n📞 ${shop.phone || 'Sin teléfono'}\n\nEncuéntralo en Chequéalo RD: ${window.location.origin}`;
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+              }}
+              className="p-2 rounded-full hover:bg-green-50 dark:hover:bg-green-950 transition-all"
+              title="Compartir por WhatsApp"
+            >
+              <Share2 className="h-5 w-5 text-muted-foreground hover:text-green-600" />
+            </button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
