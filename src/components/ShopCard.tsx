@@ -40,7 +40,7 @@ export const ShopCard = ({ shop, isFeatured, onClick, showFavorite = true }: Sho
         <div className="absolute -top-3 right-4">
           <div className="flex items-center gap-1.5 bg-orange text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
             <Award className="h-3 w-3" />
-            Destacado
+            Calificación más Alta
           </div>
         </div>
       )}
