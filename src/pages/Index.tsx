@@ -4,39 +4,42 @@ import { Navbar } from '@/components/Navbar';
 import { SidebarHero } from '@/components/SidebarHero';
 import { Footer } from '@/components/Footer';
 import { ShopCard } from '@/components/ShopCard';
+import { ShopDetailModal } from '@/components/ShopDetailModal';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
-import { fetchMechanicShops, searchMechanicShops, getFeaturedShops, isFeaturedShop } from '@/services/mechanicService';
+import { fetchShopRatings, searchShops, getFeaturedShopIds } from '@/services/mechanicService';
+import type { ShopWithStats } from '@/types/mechanic';
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedShop, setSelectedShop] = useState<ShopWithStats | null>(null);
 
   const { data: shops = [], isLoading, error } = useQuery({
-    queryKey: ['mechanicShops'],
-    queryFn: fetchMechanicShops,
+    queryKey: ['shopRatings'],
+    queryFn: fetchShopRatings,
   });
 
   const featuredIds = useMemo(() => {
     if (!shops.length) return [];
-    return getFeaturedShops(shops);
+    return getFeaturedShopIds(shops);
   }, [shops]);
 
   const filteredShops = useMemo(() => {
-    const searched = searchMechanicShops(shops, searchQuery);
+    const searched = searchShops(shops, searchQuery);
     // Sort: featured first, then by rating
     return searched.sort((a, b) => {
-      const aFeatured = isFeaturedShop(a, featuredIds);
-      const bFeatured = isFeaturedShop(b, featuredIds);
+      const aFeatured = featuredIds.includes(a.shop_id);
+      const bFeatured = featuredIds.includes(b.shop_id);
       if (aFeatured && !bFeatured) return -1;
       if (!aFeatured && bFeatured) return 1;
-      return b.rating - a.rating;
+      return b.average_rating - a.average_rating;
     });
   }, [shops, searchQuery, featuredIds]);
 
-  // Calculate unique neighborhoods
-  const totalNeighborhoods = useMemo(() => {
-    const neighborhoods = new Set(shops.map(shop => shop.neighborhood));
-    return neighborhoods.size;
+  // Calculate unique cities
+  const totalCities = useMemo(() => {
+    const cities = new Set(shops.map(shop => shop.city));
+    return cities.size;
   }, [shops]);
 
   return (
@@ -52,7 +55,7 @@ const Index = () => {
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 totalShops={shops.length}
-                totalNeighborhoods={totalNeighborhoods}
+                totalNeighborhoods={totalCities}
               />
             </div>
 
@@ -90,13 +93,14 @@ const Index = () => {
                 <div className="space-y-4">
                   {filteredShops.map((shop, index) => (
                     <div
-                      key={shop.id}
+                      key={shop.shop_id}
                       className="animate-fade-in"
                       style={{ animationDelay: `${index * 0.05}s` }}
                     >
                       <ShopCard
                         shop={shop}
-                        isFeatured={isFeaturedShop(shop, featuredIds)}
+                        isFeatured={featuredIds.includes(shop.shop_id)}
+                        onClick={() => setSelectedShop(shop)}
                       />
                     </div>
                   ))}
@@ -108,6 +112,13 @@ const Index = () => {
       </main>
 
       <Footer />
+
+      {/* Shop Detail Modal */}
+      <ShopDetailModal
+        shop={selectedShop}
+        isOpen={!!selectedShop}
+        onClose={() => setSelectedShop(null)}
+      />
     </div>
   );
 };
