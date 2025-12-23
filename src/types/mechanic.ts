@@ -21,6 +21,23 @@ export interface Review {
   created_at: string;
 }
 
+export interface ReviewReply {
+  id: string;
+  review_id: string;
+  shop_id: string;
+  owner_user_id: string;
+  reply_text: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShopOwner {
+  id: string;
+  shop_id: string;
+  user_id: string;
+  created_at: string;
+}
+
 // Computed shop with review stats
 export interface ShopWithStats extends ShopRating {
   average_rating: number;

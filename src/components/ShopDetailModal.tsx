@@ -7,8 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { StarRating } from '@/components/StarRating';
-import type { ShopWithStats, Review } from '@/types/mechanic';
-import { submitReview, fetchShopReviews, checkExistingReview } from '@/services/mechanicService';
+import type { ShopWithStats, Review, ReviewReply } from '@/types/mechanic';
+import { submitReview, fetchShopReviewsWithReplies, checkExistingReview } from '@/services/mechanicService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface ShopDetailModalProps {
@@ -25,8 +25,8 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
   const queryClient = useQueryClient();
 
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
-    queryKey: ['reviews', shop?.shop_id],
-    queryFn: () => fetchShopReviews(shop!.shop_id),
+    queryKey: ['shopReviewsWithReplies', shop?.shop_id],
+    queryFn: () => fetchShopReviewsWithReplies(shop!.shop_id),
     enabled: !!shop?.shop_id,
   });
 
@@ -48,7 +48,7 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
       });
       setRating(0);
       setComment('');
-      queryClient.invalidateQueries({ queryKey: ['reviews', shop?.shop_id] });
+      queryClient.invalidateQueries({ queryKey: ['shopReviewsWithReplies', shop?.shop_id] });
       queryClient.invalidateQueries({ queryKey: ['existingReview', shop?.shop_id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['shopRatings'] });
     },
@@ -375,8 +375,8 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {reviews.map((review: Review) => (
+            <div className="space-y-4">
+                {reviews.map((review: Review & { reply?: ReviewReply }) => (
                   <div key={review.id} className="bg-card border border-border rounded-xl p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -393,6 +393,19 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
                       <StarRating value={review.rating} readonly size="sm" />
                     </div>
                     <p className="text-foreground leading-relaxed">{review.comment}</p>
+                    
+                    {/* Owner Reply */}
+                    {review.reply && (
+                      <div className="mt-4 ml-6 bg-muted rounded-lg p-4 border-l-4 border-orange">
+                        <p className="text-sm font-semibold text-orange mb-2">
+                          Respuesta del propietario
+                        </p>
+                        <p className="text-foreground text-sm">{review.reply.reply_text}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {formatDate(review.reply.created_at)}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
