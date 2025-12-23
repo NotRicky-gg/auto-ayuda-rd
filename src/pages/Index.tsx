@@ -1,13 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Header } from '@/components/Header';
+import { Navbar } from '@/components/Navbar';
+import { SidebarHero } from '@/components/SidebarHero';
 import { Footer } from '@/components/Footer';
-import { SearchBar } from '@/components/SearchBar';
 import { ShopCard } from '@/components/ShopCard';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { fetchMechanicShops, searchMechanicShops, getFeaturedShops, isFeaturedShop } from '@/services/mechanicService';
-import type { MechanicShop } from '@/types/mechanic';
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,65 +33,78 @@ const Index = () => {
     });
   }, [shops, searchQuery, featuredIds]);
 
+  // Calculate unique neighborhoods
+  const totalNeighborhoods = useMemo(() => {
+    const neighborhoods = new Set(shops.map(shop => shop.neighborhood));
+    return neighborhoods.size;
+  }, [shops]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+      <Navbar />
 
       <main className="flex-1">
-        {/* Search Section */}
-        <section className="bg-card border-b border-border py-8 -mt-6 relative z-10">
-          <div className="container">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          </div>
-        </section>
-
-        {/* Results Section */}
-        <section className="container py-12">
-          {/* Stats */}
-          {!isLoading && shops.length > 0 && (
-            <div className="mb-8 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">
-                {searchQuery ? 'Resultados de búsqueda' : 'Todos los Talleres'}
-              </h2>
-              <p className="text-muted-foreground">
-                {filteredShops.length} {filteredShops.length === 1 ? 'taller encontrado' : 'talleres encontrados'}
-              </p>
+        <div className="container py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Sidebar */}
+            <div className="lg:col-span-4">
+              <SidebarHero
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                totalShops={shops.length}
+                totalNeighborhoods={totalNeighborhoods}
+              />
             </div>
-          )}
 
-          {/* Loading */}
-          {isLoading && <LoadingState />}
-
-          {/* Error */}
-          {error && (
-            <div className="text-center py-10">
-              <p className="text-destructive">Error al cargar los talleres. Por favor, intenta de nuevo.</p>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && !error && filteredShops.length === 0 && (
-            <EmptyState searchQuery={searchQuery} />
-          )}
-
-          {/* Shop Grid */}
-          {!isLoading && !error && filteredShops.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredShops.map((shop, index) => (
-                <div
-                  key={shop.id}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <ShopCard
-                    shop={shop}
-                    isFeatured={isFeaturedShop(shop, featuredIds)}
-                  />
+            {/* Main Content */}
+            <div className="lg:col-span-8">
+              {/* Header */}
+              {!isLoading && shops.length > 0 && (
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-foreground">
+                    {searchQuery ? 'Resultados de búsqueda' : 'Talleres Disponibles'}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {filteredShops.length} {filteredShops.length === 1 ? 'resultado' : 'resultados'}
+                  </p>
                 </div>
-              ))}
+              )}
+
+              {/* Loading */}
+              {isLoading && <LoadingState />}
+
+              {/* Error */}
+              {error && (
+                <div className="text-center py-10">
+                  <p className="text-destructive">Error al cargar los talleres. Por favor, intenta de nuevo.</p>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!isLoading && !error && filteredShops.length === 0 && (
+                <EmptyState searchQuery={searchQuery} />
+              )}
+
+              {/* Shop List */}
+              {!isLoading && !error && filteredShops.length > 0 && (
+                <div className="space-y-4">
+                  {filteredShops.map((shop, index) => (
+                    <div
+                      key={shop.id}
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      <ShopCard
+                        shop={shop}
+                        isFeatured={isFeaturedShop(shop, featuredIds)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </section>
+          </div>
+        </div>
       </main>
 
       <Footer />
