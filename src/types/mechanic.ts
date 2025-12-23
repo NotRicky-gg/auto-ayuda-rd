@@ -5,6 +5,7 @@ export interface ShopRating {
   city: string;
   phone: string | null;
   schedule: string | null;
+  has_whatsapp: boolean;
   google_maps_url: string | null;
   latitude: number | null;
   longitude: number | null;
