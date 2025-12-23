@@ -381,10 +381,10 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-orange/10 flex items-center justify-center text-orange font-bold">
-                          {review.reviewer_name.charAt(0).toUpperCase()}
+                          {(review.reviewer_name || 'A').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-semibold text-foreground">{review.reviewer_name}</p>
+                          <p className="font-semibold text-foreground">{review.reviewer_name || 'Anónimo'}</p>
                           <p className="text-sm text-muted-foreground">
                             {formatDate(review.created_at)}
                           </p>
