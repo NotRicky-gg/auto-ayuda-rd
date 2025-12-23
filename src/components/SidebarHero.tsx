@@ -1,5 +1,6 @@
-import { Search } from 'lucide-react';
+import { Search, Navigation, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Building2, MapPin } from 'lucide-react';
 
 interface SidebarHeroProps {
@@ -7,13 +8,21 @@ interface SidebarHeroProps {
   onSearchChange: (value: string) => void;
   totalShops: number;
   totalNeighborhoods: number;
+  onNearMeClick: () => void;
+  isNearMeActive: boolean;
+  isLocating: boolean;
+  onClearNearMe: () => void;
 }
 
 export const SidebarHero = ({ 
   searchQuery, 
   onSearchChange, 
   totalShops,
-  totalNeighborhoods 
+  totalNeighborhoods,
+  onNearMeClick,
+  isNearMeActive,
+  isLocating,
+  onClearNearMe
 }: SidebarHeroProps) => {
   return (
     <aside className="lg:sticky lg:top-24 space-y-6">
@@ -38,6 +47,31 @@ export const SidebarHero = ({
             placeholder="Buscar talleres..."
             className="w-full h-12 pl-12 bg-white text-foreground border-0 rounded-xl placeholder:text-gray-400"
           />
+        </div>
+
+        {/* Near Me Button */}
+        <div className="mt-4">
+          {isNearMeActive ? (
+            <Button
+              onClick={onClearNearMe}
+              variant="outline"
+              className="w-full h-12 bg-orange text-white border-orange hover:bg-orange/90 rounded-xl"
+            >
+              <Navigation className="h-5 w-5 mr-2" />
+              Cerca de mí activo
+              <X className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={onNearMeClick}
+              disabled={isLocating}
+              variant="outline"
+              className="w-full h-12 bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-xl"
+            >
+              <Navigation className="h-5 w-5 mr-2" />
+              {isLocating ? 'Localizando...' : 'Buscar cerca de mí'}
+            </Button>
+          )}
         </div>
       </div>
 

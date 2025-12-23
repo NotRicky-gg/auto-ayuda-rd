@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
 import { SidebarHero } from '@/components/SidebarHero';
@@ -9,10 +9,31 @@ import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
 import { fetchShopRatings, searchShops, getFeaturedShopIds } from '@/services/mechanicService';
 import type { ShopWithStats } from '@/types/mechanic';
+import { useToast } from '@/hooks/use-toast';
+
+interface ShopWithDistance extends ShopWithStats {
+  distance?: number;
+}
+
+// Haversine formula to calculate distance between two coordinates in km
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedShop, setSelectedShop] = useState<ShopWithStats | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const { toast } = useToast();
 
   const { data: shops = [], isLoading, error } = useQuery({
     queryKey: ['shopRatings'],
@@ -24,7 +45,73 @@ const Index = () => {
     return getFeaturedShopIds(shops);
   }, [shops]);
 
-  const filteredShops = useMemo(() => {
+  const handleNearMeClick = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Error',
+        description: 'Tu navegador no soporta geolocalización',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setIsLocating(false);
+        toast({
+          title: 'Ubicación encontrada',
+          description: 'Mostrando talleres más cercanos',
+        });
+      },
+      (error) => {
+        setIsLocating(false);
+        let message = 'No se pudo obtener tu ubicación';
+        if (error.code === error.PERMISSION_DENIED) {
+          message = 'Permiso de ubicación denegado. Actívalo en tu navegador.';
+        }
+        toast({
+          title: 'Error',
+          description: message,
+          variant: 'destructive',
+        });
+      }
+    );
+  }, [toast]);
+
+  const handleClearNearMe = useCallback(() => {
+    setUserLocation(null);
+  }, []);
+
+  // Calculate distances and sort by proximity when user location is available
+  const shopsWithDistance = useMemo((): ShopWithDistance[] | null => {
+    if (!userLocation) return null;
+    
+    return shops
+      .filter(shop => shop.latitude !== null && shop.longitude !== null)
+      .map(shop => ({
+        ...shop,
+        distance: calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          shop.latitude!,
+          shop.longitude!
+        ),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+  }, [shops, userLocation]);
+
+  const filteredShops = useMemo((): ShopWithDistance[] => {
+    // If near me is active, use distance-sorted shops
+    if (shopsWithDistance) {
+      const searched = searchShops(shopsWithDistance, searchQuery) as ShopWithDistance[];
+      return searched.sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+    }
+
     const searched = searchShops(shops, searchQuery);
     // Sort: featured first, then by rating
     return searched.sort((a, b) => {
@@ -34,7 +121,7 @@ const Index = () => {
       if (!aFeatured && bFeatured) return 1;
       return b.average_rating - a.average_rating;
     });
-  }, [shops, searchQuery, featuredIds]);
+  }, [shops, searchQuery, featuredIds, shopsWithDistance]);
 
   // Calculate unique cities
   const totalCities = useMemo(() => {
@@ -56,6 +143,10 @@ const Index = () => {
                 onSearchChange={setSearchQuery}
                 totalShops={shops.length}
                 totalNeighborhoods={totalCities}
+                onNearMeClick={handleNearMeClick}
+                isNearMeActive={!!userLocation}
+                isLocating={isLocating}
+                onClearNearMe={handleClearNearMe}
               />
             </div>
 
