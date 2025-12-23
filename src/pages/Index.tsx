@@ -45,7 +45,7 @@ const Index = () => {
     return getFeaturedShopIds(shops);
   }, [shops]);
 
-  const handleNearMeClick = useCallback(() => {
+  const handleNearMeClick = useCallback(async () => {
     if (!navigator.geolocation) {
       toast({
         title: 'Error',
@@ -56,6 +56,26 @@ const Index = () => {
     }
 
     setIsLocating(true);
+
+    // Check permission state first if available
+    if (navigator.permissions) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        
+        if (permissionStatus.state === 'denied') {
+          setIsLocating(false);
+          toast({
+            title: 'Ubicación bloqueada',
+            description: 'Activa el permiso de ubicación en la configuración de tu navegador.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } catch {
+        // Permission API not supported, continue with geolocation request
+      }
+    }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserLocation({
@@ -70,15 +90,24 @@ const Index = () => {
       },
       (error) => {
         setIsLocating(false);
-        let message = 'No se pudo obtener tu ubicación';
+        let message = 'No se pudo obtener tu ubicación. Intenta de nuevo.';
         if (error.code === error.PERMISSION_DENIED) {
-          message = 'Permiso de ubicación denegado. Actívalo en tu navegador.';
+          message = 'Permite el acceso a tu ubicación cuando el navegador te lo solicite.';
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          message = 'No se pudo determinar tu ubicación. Verifica que el GPS esté activado.';
+        } else if (error.code === error.TIMEOUT) {
+          message = 'La solicitud de ubicación tardó demasiado. Intenta de nuevo.';
         }
         toast({
-          title: 'Error',
+          title: 'No se pudo obtener ubicación',
           description: message,
           variant: 'destructive',
         });
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000, // Cache location for 5 minutes
       }
     );
   }, [toast]);

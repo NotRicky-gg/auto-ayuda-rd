@@ -86,7 +86,8 @@ export const Navbar = () => {
                 <Button
                   asChild
                   variant="ghost"
-                  className="text-foreground hover:text-orange hover:bg-transparent"
+                  size="sm"
+                  className="text-foreground hover:text-orange hover:bg-transparent hidden sm:inline-flex"
                 >
                   <Link to="/auth">
                     <LogIn className="h-4 w-4 mr-2" />
@@ -95,11 +96,12 @@ export const Navbar = () => {
                 </Button>
                 <Button
                   asChild
+                  size="sm"
                   className="bg-orange hover:bg-orange-light text-white font-semibold"
                 >
                   <Link to="/auth">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Registrarse
+                    <UserPlus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Registrarse</span>
                   </Link>
                 </Button>
               </>
