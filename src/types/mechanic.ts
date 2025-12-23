@@ -38,6 +38,13 @@ export interface ShopOwner {
   created_at: string;
 }
 
+export interface UserFavorite {
+  id: string;
+  user_id: string;
+  shop_id: string;
+  created_at: string;
+}
+
 // Computed shop with review stats
 export interface ShopWithStats extends ShopRating {
   average_rating: number;
