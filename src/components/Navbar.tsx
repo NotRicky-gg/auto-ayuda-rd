@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Zap, LogIn, LogOut, UserPlus, Building2 } from 'lucide-react';
+import { Zap, LogIn, LogOut, UserPlus, Building2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,6 +56,13 @@ export const Navbar = () => {
                     <p className="font-medium">{user.user_metadata?.full_name || 'Usuario'}</p>
                     <p className="text-muted-foreground text-xs">{user.email}</p>
                   </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to="/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      Mi Perfil
+                    </Link>
+                  </DropdownMenuItem>
                   {isOwner && (
                     <>
                       <DropdownMenuSeparator />
