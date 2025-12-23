@@ -15,6 +15,37 @@ interface ShopWithDistance extends ShopWithStats {
   distance?: number;
 }
 
+// Extract coordinates from Google Maps URL
+const extractCoordsFromUrl = (url: string | null): { lat: number; lng: number } | null => {
+  if (!url) return null;
+  
+  // Try to match @lat,lng pattern (most common)
+  const atMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (atMatch) {
+    return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+  }
+  
+  // Try to match place/ pattern with coordinates
+  const placeMatch = url.match(/place\/[^/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (placeMatch) {
+    return { lat: parseFloat(placeMatch[1]), lng: parseFloat(placeMatch[2]) };
+  }
+  
+  // Try to match q= parameter
+  const qMatch = url.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (qMatch) {
+    return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
+  }
+  
+  // Try to match ll= parameter
+  const llMatch = url.match(/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (llMatch) {
+    return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) };
+  }
+  
+  return null;
+};
+
 // Haversine formula to calculate distance between two coordinates in km
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371; // Earth's radius in km
@@ -121,17 +152,24 @@ const Index = () => {
     if (!userLocation) return null;
     
     return shops
-      .filter(shop => shop.latitude !== null && shop.longitude !== null)
-      .map(shop => ({
-        ...shop,
-        distance: calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          shop.latitude!,
-          shop.longitude!
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance);
+      .map(shop => {
+        // Try to get coordinates from Google Maps URL first (more accurate)
+        // Fall back to stored lat/lng
+        const urlCoords = extractCoordsFromUrl(shop.google_maps_url);
+        const lat = urlCoords?.lat ?? shop.latitude;
+        const lng = urlCoords?.lng ?? shop.longitude;
+        
+        if (lat === null || lng === null) {
+          return null; // Skip shops without coordinates
+        }
+        
+        return {
+          ...shop,
+          distance: calculateDistance(userLocation.lat, userLocation.lng, lat, lng),
+        };
+      })
+      .filter((shop): shop is NonNullable<typeof shop> => shop !== null)
+      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
   }, [shops, userLocation]);
 
   const filteredShops = useMemo((): ShopWithDistance[] => {
