@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { StarRating } from '@/components/StarRating';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 import type { ShopWithStats, Review, ReviewReply } from '@/types/mechanic';
 import { submitReview, fetchShopReviewsWithReplies, checkExistingReview } from '@/services/mechanicService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,9 +22,11 @@ interface ShopDetailModalProps {
 export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [showPWAPrompt, setShowPWAPrompt] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
 
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['shopReviewsWithReplies', shop?.shop_id],
@@ -51,6 +55,13 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
       queryClient.invalidateQueries({ queryKey: ['shopReviewsWithReplies', shop?.shop_id] });
       queryClient.invalidateQueries({ queryKey: ['existingReview', shop?.shop_id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['shopRatings'] });
+      
+      // Show PWA install prompt if available and not already installed
+      if (isInstallable && !isInstalled) {
+        setTimeout(() => {
+          setShowPWAPrompt(true);
+        }, 1000);
+      }
     },
     onError: (error: any) => {
       if (error.code === '23505') {
@@ -413,6 +424,22 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
           </div>
         </div>
       </DialogContent>
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt
+        isOpen={showPWAPrompt}
+        onClose={() => setShowPWAPrompt(false)}
+        onInstall={async () => {
+          const installed = await promptInstall();
+          if (installed) {
+            toast({
+              title: '¡App instalada!',
+              description: 'Ahora puedes acceder desde tu pantalla de inicio.',
+            });
+          }
+          setShowPWAPrompt(false);
+        }}
+      />
     </Dialog>
   );
 };
