@@ -61,8 +61,25 @@ export const fetchShopReviews = async (shopId: string): Promise<Review[]> => {
   return data || [];
 };
 
+export const checkExistingReview = async (shopId: string, userId: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id')
+    .eq('shop_id', shopId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error checking existing review:', error);
+    return false;
+  }
+
+  return !!data;
+};
+
 export const submitReview = async (
   shopId: string,
+  userId: string,
   reviewerName: string,
   rating: number,
   comment: string
@@ -71,6 +88,7 @@ export const submitReview = async (
     .from('reviews')
     .insert({
       shop_id: shopId,
+      user_id: userId,
       reviewer_name: reviewerName,
       rating,
       comment,

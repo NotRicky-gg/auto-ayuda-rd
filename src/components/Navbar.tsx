@@ -1,4 +1,5 @@
-import { Zap, LogIn, LogOut, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Zap, LogIn, LogOut, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,23 +11,23 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export const Navbar = () => {
-  const { user, signInWithGoogle, signOut, loading } = useAuth();
+  const { user, signOut, loading } = useAuth();
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50">
       <div className="container py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <div className="p-2 bg-orange rounded-lg">
               <Zap className="h-5 w-5 text-white" fill="currentColor" />
             </div>
             <span className="text-xl font-bold tracking-tight text-foreground">
               CHEQUÉALO RD
             </span>
-          </div>
+          </Link>
 
           {/* Auth Section */}
-          <div>
+          <div className="flex items-center gap-3">
             {loading ? (
               <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
             ) : user ? (
@@ -53,13 +54,27 @@ export const Navbar = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button
-                onClick={signInWithGoogle}
-                className="bg-orange hover:bg-orange-light text-white font-semibold gap-2"
-              >
-                <LogIn className="h-4 w-4" />
-                Iniciar Sesión
-              </Button>
+              <>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="text-foreground hover:text-orange"
+                >
+                  <Link to="/auth">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Iniciar Sesión
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  className="bg-orange hover:bg-orange-light text-white font-semibold"
+                >
+                  <Link to="/auth">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Registrarse
+                  </Link>
+                </Button>
+              </>
             )}
           </div>
         </div>
