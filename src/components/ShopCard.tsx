@@ -1,14 +1,20 @@
-import { Star, MapPin, Phone, Clock, ChevronRight, Award, ExternalLink } from 'lucide-react';
+import { Star, MapPin, Phone, Clock, ChevronRight, Award, ExternalLink, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { ShopWithStats } from '@/types/mechanic';
 
 interface ShopCardProps {
-  shop: ShopWithStats;
+  shop: ShopWithStats & { distance?: number };
   isFeatured?: boolean;
   onClick: () => void;
 }
 
 export const ShopCard = ({ shop, isFeatured, onClick }: ShopCardProps) => {
+  const formatDistance = (km: number) => {
+    if (km < 1) {
+      return `${Math.round(km * 1000)} m`;
+    }
+    return `${km.toFixed(1)} km`;
+  };
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
@@ -63,6 +69,12 @@ export const ShopCard = ({ shop, isFeatured, onClick }: ShopCardProps) => {
               <MapPin className="h-4 w-4 text-orange" />
               <span>{shop.city}</span>
             </div>
+            {shop.distance !== undefined && (
+              <div className="flex items-center gap-1.5">
+                <Navigation className="h-4 w-4 text-orange" />
+                <span className="font-medium text-orange">{formatDistance(shop.distance)}</span>
+              </div>
+            )}
             {shop.google_maps_url && (
               <a
                 href={shop.google_maps_url}
