@@ -58,7 +58,7 @@ export const Navbar = () => {
                 <Button
                   asChild
                   variant="ghost"
-                  className="text-foreground hover:text-orange"
+                  className="text-foreground hover:text-orange hover:bg-transparent"
                 >
                   <Link to="/auth">
                     <LogIn className="h-4 w-4 mr-2" />
