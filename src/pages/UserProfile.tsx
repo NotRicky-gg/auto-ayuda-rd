@@ -132,16 +132,16 @@ const UserProfile = () => {
             </CardContent>
           </Card>
 
-          {/* Tabs for Favorites and Reviews */}
-          <Tabs defaultValue="favorites" className="space-y-6">
+          {/* Tabs for Reviews and Favorites */}
+          <Tabs defaultValue="reviews" className="space-y-6">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="favorites" className="gap-2">
-                <Heart className="h-4 w-4" />
-                Favoritos ({favorites.length})
-              </TabsTrigger>
               <TabsTrigger value="reviews" className="gap-2">
                 <MessageSquare className="h-4 w-4" />
                 Reseñas ({reviews.length})
+              </TabsTrigger>
+              <TabsTrigger value="favorites" className="gap-2">
+                <Heart className="h-4 w-4" />
+                Favoritos ({favorites.length})
               </TabsTrigger>
             </TabsList>
 
