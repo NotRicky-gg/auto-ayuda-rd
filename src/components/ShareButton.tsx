@@ -14,14 +14,14 @@ export const ShareButton = ({ shopName, shopCity, size = 'md' }: ShareButtonProp
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const message = `🔧 ¡Encontré un taller de confianza!\n\n*${shopName}*\n📍 ${shopCity}\n\n¿Buscas un buen mecánico? En *Chequéalo RD* encuentras los mejores talleres con reseñas reales de clientes. ¡Dale un vistazo!\n\n👉 ${window.location.origin}`;
+    const message = `🔧 ¡Chequea este taller de confianza!\n\n*${shopName}*\n📍 ${shopCity}\n\n¿Tu carro necesita atención? En *Chequéalo RD* encuentras los mejores talleres con reseñas reales. ¡No te quedes en la calle!\n\n👉 ${window.location.origin}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
     // Try native share first (mobile), fallback to WhatsApp
     if (navigator.share) {
       navigator.share({
         title: `${shopName} - Chequéalo RD`,
-        text: `¡Mira este taller mecánico! ${shopName} en ${shopCity}`,
+        text: `🔧 ¡Chequea este taller de confianza! ${shopName} en ${shopCity}`,
         url: window.location.origin,
       }).catch(() => {
         // User cancelled or error, open WhatsApp
