@@ -14,7 +14,7 @@ export const ShareButton = ({ shopName, shopCity, size = 'md' }: ShareButtonProp
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const message = `¡Mira este taller mecánico! 🔧\n\n*${shopName}*\n📍 ${shopCity}\n\nEncuéntralo en Chequéalo RD: ${window.location.origin}`;
+    const message = `🔧 ¡Encontré un taller de confianza!\n\n*${shopName}*\n📍 ${shopCity}\n\n¿Buscas un buen mecánico? En *Chequéalo RD* encuentras los mejores talleres con reseñas reales de clientes. ¡Dale un vistazo!\n\n👉 ${window.location.origin}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
     // Try native share first (mobile), fallback to WhatsApp

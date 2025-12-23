@@ -135,9 +135,10 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
             </DialogTitle>
             <button
               onClick={() => {
-                const message = `¡Mira este taller mecánico! 🔧\n\n*${shop.shop_name}*\n📍 ${shop.city}\n📞 ${shop.phone || 'Sin teléfono'}\n\nEncuéntralo en Chequéalo RD: ${window.location.origin}`;
+                const phoneText = shop.phone ? `\n📞 ${shop.phone}` : "";
+                const message = `🔧 ¡Encontré un taller de confianza!\n\n*${shop.shop_name}*\n📍 ${shop.city}${phoneText}\n\n¿Buscas un buen mecánico? En *Chequéalo RD* encuentras los mejores talleres con reseñas reales de clientes. ¡Dale un vistazo!\n\n👉 ${window.location.origin}`;
                 const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-                window.open(whatsappUrl, '_blank');
+                window.open(whatsappUrl, "_blank");
               }}
               className="p-2 rounded-full hover:bg-green-50 dark:hover:bg-green-950 transition-all"
               title="Compartir por WhatsApp"
