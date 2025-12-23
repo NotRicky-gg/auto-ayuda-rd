@@ -1,13 +1,24 @@
-export interface MechanicShop {
-  id: string;
-  name: string;
+export interface ShopRating {
+  shop_id: string;
+  shop_name: string;
   address: string;
-  neighborhood: string;
-  phone: string;
-  services: string[];
-  category: string;
+  city: string;
+  google_maps_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface Review {
+  id: string;
+  shop_id: string;
+  reviewer_name: string;
   rating: number;
+  comment: string;
+  created_at: string;
+}
+
+// Computed shop with review stats
+export interface ShopWithStats extends ShopRating {
+  average_rating: number;
   review_count: number;
-  hours: string;
-  featured: boolean;
 }
