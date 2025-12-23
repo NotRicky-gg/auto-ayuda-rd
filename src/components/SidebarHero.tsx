@@ -27,13 +27,13 @@ export const SidebarHero = ({
   return (
     <aside className="lg:sticky lg:top-24 space-y-6">
       {/* Hero Card */}
-      <div className="bg-navy rounded-2xl p-8 text-white">
-        <h1 className="text-4xl md:text-5xl font-black leading-tight mb-2">
+      <div className="bg-navy rounded-2xl p-5 sm:p-8 text-white">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-2">
           ENCUENTRA
           <br />
           <span className="text-orange">TU MECÁNICO</span>
         </h1>
-        <p className="text-gray-400 mt-4 text-sm">
+        <p className="text-gray-400 mt-3 sm:mt-4 text-sm">
           Busca talleres por nombre, ubicación o servicios
         </p>
 
