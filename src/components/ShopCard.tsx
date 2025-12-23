@@ -1,14 +1,16 @@
 import { Star, MapPin, Phone, Clock, ChevronRight, Award, ExternalLink, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { FavoriteButton } from '@/components/FavoriteButton';
 import type { ShopWithStats } from '@/types/mechanic';
 
 interface ShopCardProps {
   shop: ShopWithStats & { distance?: number };
   isFeatured?: boolean;
   onClick: () => void;
+  showFavorite?: boolean;
 }
 
-export const ShopCard = ({ shop, isFeatured, onClick }: ShopCardProps) => {
+export const ShopCard = ({ shop, isFeatured, onClick, showFavorite = true }: ShopCardProps) => {
   const formatDistance = (km: number) => {
     if (km < 1) {
       return `${Math.round(km * 1000)} m`;
@@ -46,10 +48,13 @@ export const ShopCard = ({ shop, isFeatured, onClick }: ShopCardProps) => {
         {/* Main Content */}
         <div className="flex-1 space-y-3">
           {/* Header */}
-          <div>
+          <div className="flex items-start justify-between">
             <h3 className="text-lg font-bold text-foreground uppercase tracking-wide">
               {shop.shop_name}
             </h3>
+            {showFavorite && (
+              <FavoriteButton shopId={shop.shop_id} size="sm" />
+            )}
           </div>
 
           {/* Rating */}

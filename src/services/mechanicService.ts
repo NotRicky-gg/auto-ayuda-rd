@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { ShopRating, Review, ShopWithStats, ReviewReply, ShopOwner } from '@/types/mechanic';
+import type { ShopRating, Review, ShopWithStats, ReviewReply, ShopOwner, UserFavorite } from '@/types/mechanic';
 
 // Fetch shops from shop_ratings table
 export const fetchShopRatings = async (): Promise<ShopWithStats[]> => {
@@ -300,4 +300,104 @@ export const fetchUserReviews = async (userId: string): Promise<(Review & { shop
     ...review,
     shop: shops?.find(s => s.shop_id === review.shop_id),
   }));
+};
+
+// ==================== FAVORITES ====================
+
+// Check if a shop is favorited by user
+export const checkIsFavorite = async (userId: string, shopId: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from('user_favorites')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('shop_id', shopId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error checking favorite:', error);
+    return false;
+  }
+
+  return !!data;
+};
+
+// Add a shop to favorites
+export const addFavorite = async (userId: string, shopId: string): Promise<UserFavorite | null> => {
+  const { data, error } = await supabase
+    .from('user_favorites')
+    .insert({ user_id: userId, shop_id: shopId })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error adding favorite:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+// Remove a shop from favorites
+export const removeFavorite = async (userId: string, shopId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('user_favorites')
+    .delete()
+    .eq('user_id', userId)
+    .eq('shop_id', shopId);
+
+  if (error) {
+    console.error('Error removing favorite:', error);
+    throw error;
+  }
+};
+
+// Fetch user's favorite shops with stats
+export const fetchUserFavorites = async (userId: string): Promise<ShopWithStats[]> => {
+  // Get user's favorite shop IDs
+  const { data: favorites, error: favError } = await supabase
+    .from('user_favorites')
+    .select('shop_id')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (favError) {
+    console.error('Error fetching favorites:', favError);
+    return [];
+  }
+
+  if (!favorites || favorites.length === 0) return [];
+
+  const shopIds = favorites.map(f => f.shop_id);
+
+  // Fetch shop details
+  const { data: shops, error: shopsError } = await supabase
+    .from('shop_ratings')
+    .select('*')
+    .in('shop_id', shopIds);
+
+  if (shopsError) {
+    console.error('Error fetching favorite shops:', shopsError);
+    return [];
+  }
+
+  // Fetch reviews for stats
+  const { data: reviews } = await supabase
+    .from('reviews')
+    .select('*')
+    .in('shop_id', shopIds);
+
+  // Calculate stats and return
+  return (shops || []).map((shop: ShopRating) => {
+    const shopReviews = (reviews || []).filter((r: Review) => r.shop_id === shop.shop_id);
+    const reviewCount = shopReviews.length;
+    const averageRating = reviewCount > 0
+      ? shopReviews.reduce((sum: number, r: Review) => sum + r.rating, 0) / reviewCount
+      : 0;
+
+    return {
+      ...shop,
+      average_rating: Math.round(averageRating * 10) / 10,
+      review_count: reviewCount,
+    };
+  });
 };

@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { StarRating } from '@/components/StarRating';
+import { ShopCard } from '@/components/ShopCard';
+import { ShopDetailModal } from '@/components/ShopDetailModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchUserReviews } from '@/services/mechanicService';
-import type { Review, ShopRating } from '@/types/mechanic';
-import { User, MessageSquare, Star, MapPin, Calendar } from 'lucide-react';
+import { fetchUserReviews, fetchUserFavorites } from '@/services/mechanicService';
+import type { Review, ShopRating, ShopWithStats } from '@/types/mechanic';
+import { User, MessageSquare, Star, MapPin, Calendar, Heart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
@@ -15,14 +18,28 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 
 const UserProfile = () => {
   const { user, loading: authLoading } = useAuth();
+  const [selectedShop, setSelectedShop] = useState<ShopWithStats | null>(null);
 
   // Fetch user's reviews
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['userReviews', user?.id],
     queryFn: () => fetchUserReviews(user!.id),
+    enabled: !!user?.id,
+  });
+
+  // Fetch user's favorites
+  const { data: favorites = [], isLoading: favoritesLoading } = useQuery({
+    queryKey: ['userFavorites', user?.id],
+    queryFn: () => fetchUserFavorites(user!.id),
     enabled: !!user?.id,
   });
 
@@ -92,8 +109,11 @@ const UserProfile = () => {
                   </div>
                 </div>
 
-                {/* Stats */}
                 <div className="flex gap-6">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-foreground">{favorites.length}</p>
+                    <p className="text-sm text-muted-foreground">Favoritos</p>
+                  </div>
                   <div className="text-center">
                     <p className="text-3xl font-bold text-foreground">{totalReviews}</p>
                     <p className="text-sm text-muted-foreground">Reseñas</p>
@@ -105,86 +125,156 @@ const UserProfile = () => {
                         {averageRatingGiven > 0 ? averageRatingGiven.toFixed(1) : '-'}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">Promedio dado</p>
+                    <p className="text-sm text-muted-foreground">Promedio</p>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Reviews Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-orange" />
-                Mis Reseñas
-              </CardTitle>
-              <CardDescription>
-                Todas las reseñas que has dejado en talleres
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {reviewsLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="border border-border rounded-lg p-4 animate-pulse">
-                      <div className="h-5 bg-muted rounded w-1/3 mb-2" />
-                      <div className="h-4 bg-muted rounded w-full mb-2" />
-                      <div className="h-4 bg-muted rounded w-2/3" />
-                    </div>
-                  ))}
-                </div>
-              ) : reviews.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Aún no has dejado reseñas
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Visita talleres y comparte tu experiencia con otros usuarios.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {reviews.map((review: Review & { shop?: ShopRating }) => (
-                    <div key={review.id} className="border border-border rounded-lg p-5 hover:border-orange/30 transition-colors">
-                      {/* Shop Info */}
-                      {review.shop && (
-                        <div className="flex items-center gap-3 mb-3 pb-3 border-b border-border">
-                          <div className="h-10 w-10 rounded-lg bg-navy flex items-center justify-center">
-                            <MapPin className="h-5 w-5 text-orange" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-foreground uppercase">
-                              {review.shop.shop_name}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {review.shop.city}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+          {/* Tabs for Favorites and Reviews */}
+          <Tabs defaultValue="favorites" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="favorites" className="gap-2">
+                <Heart className="h-4 w-4" />
+                Favoritos ({favorites.length})
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Reseñas ({reviews.length})
+              </TabsTrigger>
+            </TabsList>
 
-                      {/* Review Content */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <StarRating value={review.rating} readonly size="sm" />
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {formatDate(review.created_at)}
-                          </p>
+            {/* Favorites Tab */}
+            <TabsContent value="favorites">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Heart className="h-5 w-5 text-red-500" />
+                    Mis Favoritos
+                  </CardTitle>
+                  <CardDescription>
+                    Talleres que has guardado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {favoritesLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2].map(i => (
+                        <div key={i} className="border border-border rounded-lg p-4 animate-pulse">
+                          <div className="h-5 bg-muted rounded w-1/3 mb-2" />
+                          <div className="h-4 bg-muted rounded w-full" />
                         </div>
-                      </div>
-                      <p className="text-foreground leading-relaxed">{review.comment}</p>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  ) : favorites.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Heart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        No tienes favoritos aún
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Guarda talleres que te gusten para encontrarlos fácilmente.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {favorites.map((shop) => (
+                        <ShopCard
+                          key={shop.shop_id}
+                          shop={shop}
+                          onClick={() => setSelectedShop(shop)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Reviews Tab */}
+            <TabsContent value="reviews">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-orange" />
+                    Mis Reseñas
+                  </CardTitle>
+                  <CardDescription>
+                    Todas las reseñas que has dejado en talleres
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {reviewsLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="border border-border rounded-lg p-4 animate-pulse">
+                          <div className="h-5 bg-muted rounded w-1/3 mb-2" />
+                          <div className="h-4 bg-muted rounded w-full mb-2" />
+                          <div className="h-4 bg-muted rounded w-2/3" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : reviews.length === 0 ? (
+                    <div className="text-center py-12">
+                      <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
+                        Aún no has dejado reseñas
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Visita talleres y comparte tu experiencia con otros usuarios.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map((review: Review & { shop?: ShopRating }) => (
+                        <div key={review.id} className="border border-border rounded-lg p-5 hover:border-orange/30 transition-colors">
+                          {/* Shop Info */}
+                          {review.shop && (
+                            <div className="flex items-center gap-3 mb-3 pb-3 border-b border-border">
+                              <div className="h-10 w-10 rounded-lg bg-navy flex items-center justify-center">
+                                <MapPin className="h-5 w-5 text-orange" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-foreground uppercase">
+                                  {review.shop.shop_name}
+                                </h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {review.shop.city}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Review Content */}
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <StarRating value={review.rating} readonly size="sm" />
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {formatDate(review.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-foreground leading-relaxed">{review.comment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
       <Footer />
+
+      {/* Shop Detail Modal */}
+      <ShopDetailModal
+        shop={selectedShop}
+        isOpen={!!selectedShop}
+        onClose={() => setSelectedShop(null)}
+      />
     </div>
   );
 };
