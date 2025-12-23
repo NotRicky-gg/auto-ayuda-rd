@@ -11,6 +11,7 @@ export interface ShopRating {
 export interface Review {
   id: string;
   shop_id: string;
+  user_id: string;
   reviewer_name: string;
   rating: number;
   comment: string;
