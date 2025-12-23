@@ -1,17 +1,26 @@
 import { Link } from 'react-router-dom';
-import { Zap, LogIn, LogOut, UserPlus } from 'lucide-react';
+import { Zap, LogIn, LogOut, UserPlus, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { checkIsShopOwner } from '@/services/mechanicService';
+import { useQuery } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
 export const Navbar = () => {
   const { user, signOut, loading } = useAuth();
+
+  const { data: isOwner } = useQuery({
+    queryKey: ['isShopOwner', user?.id],
+    queryFn: () => checkIsShopOwner(user!.id),
+    enabled: !!user?.id,
+  });
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50">
@@ -47,6 +56,18 @@ export const Navbar = () => {
                     <p className="font-medium">{user.user_metadata?.full_name || 'Usuario'}</p>
                     <p className="text-muted-foreground text-xs">{user.email}</p>
                   </div>
+                  {isOwner && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link to="/owner">
+                          <Building2 className="mr-2 h-4 w-4" />
+                          Panel de Propietario
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Cerrar sesión
