@@ -3,6 +3,8 @@ export interface ShopRating {
   shop_name: string;
   address: string;
   city: string;
+  phone: string | null;
+  schedule: string | null;
   google_maps_url: string | null;
   latitude: number | null;
   longitude: number | null;
