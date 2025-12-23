@@ -160,7 +160,7 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
                     >
                       {shop.phone}
                     </a>
-                    {shop.has_whatsapp && (
+                    {shop.whatsapp && (
                       <a
                         href={`https://wa.me/${shop.phone.replace(/[^0-9]/g, '')}`}
                         target="_blank"
