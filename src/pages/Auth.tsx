@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, User, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Zap, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,8 +19,13 @@ const signInSchema = z.object({
   password: z.string().min(1, 'Ingresa tu contraseña').max(100),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().email('Email inválido').max(255),
+});
+
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,6 +35,43 @@ export default function Auth() {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const validated = forgotPasswordSchema.parse({ email: formData.email });
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(validated.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Correo enviado',
+        description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
+      });
+      setIsForgotPassword(false);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'Error de validación',
+          description: error.errors[0].message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se pudo enviar el correo. Intenta de nuevo.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,102 +181,168 @@ export default function Auth() {
 
           {/* Title */}
           <h1 className="text-2xl font-bold text-center text-foreground mb-2">
-            {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
+            {isForgotPassword 
+              ? 'Recuperar contraseña' 
+              : isSignUp 
+              ? 'Crear cuenta' 
+              : 'Iniciar sesión'}
           </h1>
           <p className="text-center text-muted-foreground mb-8">
-            {isSignUp
+            {isForgotPassword
+              ? 'Ingresa tu email para recibir un enlace de recuperación'
+              : isSignUp
               ? 'Regístrate para dejar reseñas de talleres'
               : 'Ingresa para compartir tu experiencia'}
           </p>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {isSignUp && (
+          {/* Forgot Password Form */}
+          {isForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-foreground">
-                  Nombre
+                <Label htmlFor="email" className="text-foreground">
+                  Email
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
-                    id="name"
-                    type="text"
-                    placeholder="Tu nombre"
+                    id="email"
+                    type="email"
+                    placeholder="tu@email.com"
                     className="pl-10 h-12 bg-muted border-border"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">
-                Email
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu@email.com"
-                  className="pl-10 h-12 bg-muted border-border"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-            </div>
+              <Button
+                type="submit"
+                className="w-full h-12 bg-orange hover:bg-orange-light text-white font-semibold text-base"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar enlace de recuperación'
+                )}
+              </Button>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">
-                Contraseña
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={isSignUp ? 'Mínimo 6 caracteres' : '••••••••'}
-                  className="pl-10 pr-10 h-12 bg-muted border-border"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                />
+              <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsForgotPassword(false)}
+                  className="text-orange hover:text-orange-light font-semibold"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  Volver a iniciar sesión
                 </button>
               </div>
-            </div>
+            </form>
+          ) : (
+            <>
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {isSignUp && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-foreground">
+                      Nombre
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Tu nombre"
+                        className="pl-10 h-12 bg-muted border-border"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
 
-            <Button
-              type="submit"
-              className="w-full h-12 bg-orange hover:bg-orange-light text-white font-semibold text-base"
-              disabled={loading}
-            >
-              {loading
-                ? 'Cargando...'
-                : isSignUp
-                ? 'Crear cuenta'
-                : 'Iniciar sesión'}
-            </Button>
-          </form>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-foreground">
+                    Email
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="tu@email.com"
+                      className="pl-10 h-12 bg-muted border-border"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+                </div>
 
-          {/* Toggle */}
-          <div className="mt-6 text-center">
-            <p className="text-muted-foreground">
-              {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-orange hover:text-orange-light font-semibold ml-2"
-              >
-                {isSignUp ? 'Iniciar sesión' : 'Regístrate'}
-              </button>
-            </p>
-          </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-foreground">
+                      Contraseña
+                    </Label>
+                    {!isSignUp && (
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPassword(true)}
+                        className="text-sm text-orange hover:text-orange-light"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder={isSignUp ? 'Mínimo 6 caracteres' : '••••••••'}
+                      className="pl-10 pr-10 h-12 bg-muted border-border"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-orange hover:bg-orange-light text-white font-semibold text-base"
+                  disabled={loading}
+                >
+                  {loading
+                    ? 'Cargando...'
+                    : isSignUp
+                    ? 'Crear cuenta'
+                    : 'Iniciar sesión'}
+                </Button>
+              </form>
+
+              {/* Toggle */}
+              <div className="mt-6 text-center">
+                <p className="text-muted-foreground">
+                  {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
+                  <button
+                    type="button"
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="text-orange hover:text-orange-light font-semibold ml-2"
+                  >
+                    {isSignUp ? 'Iniciar sesión' : 'Regístrate'}
+                  </button>
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
