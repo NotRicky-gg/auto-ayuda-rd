@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Zap, LogIn, LogOut, UserPlus, Building2, User } from 'lucide-react';
+import { Zap, LogIn, LogOut, UserPlus, Building2, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { checkIsShopOwner } from '@/services/mechanicService';
+import { checkIsAdmin } from '@/services/claimService';
 import { useQuery } from '@tanstack/react-query';
 import {
   DropdownMenu,
@@ -19,6 +20,12 @@ export const Navbar = () => {
   const { data: isOwner } = useQuery({
     queryKey: ['isShopOwner', user?.id],
     queryFn: () => checkIsShopOwner(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ['isAdmin', user?.id],
+    queryFn: () => checkIsAdmin(user!.id),
     enabled: !!user?.id,
   });
 
@@ -70,6 +77,17 @@ export const Navbar = () => {
                         <Link to="/owner">
                           <Building2 className="mr-2 h-4 w-4" />
                           Panel de Propietario
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link to="/admin">
+                          <Shield className="mr-2 h-4 w-4" />
+                          Panel de Admin
                         </Link>
                       </DropdownMenuItem>
                     </>
