@@ -7,9 +7,10 @@ import { StarRating } from '@/components/StarRating';
 import { ShopCard } from '@/components/ShopCard';
 import { ShopDetailModal } from '@/components/ShopDetailModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { fetchUserReviews, fetchUserFavorites, updateReview } from '@/services/mechanicService';
 import type { Review, ShopRating, ShopWithStats } from '@/types/mechanic';
-import { User, MessageSquare, Star, MapPin, Calendar, Heart, Pencil, X, Check } from 'lucide-react';
+import { User, MessageSquare, Star, MapPin, Calendar, Heart, Pencil, X, Check, KeyRound, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +35,7 @@ const UserProfile = () => {
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [editRating, setEditRating] = useState(0);
   const [editComment, setEditComment] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -105,6 +107,32 @@ const UserProfile = () => {
     updateReviewMutation.mutate({ reviewId, rating: editRating, comment: editComment });
   };
 
+  const handleResetPassword = async () => {
+    if (!user?.email) return;
+    
+    setIsResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Correo enviado',
+        description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo enviar el correo de restablecimiento.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-DO', {
       year: 'numeric',
@@ -169,6 +197,22 @@ const UserProfile = () => {
                       Miembro desde {formatDate(user.created_at || new Date().toISOString())}
                     </div>
                   </div>
+
+                  {/* Reset Password Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetPassword}
+                    disabled={isResettingPassword}
+                    className="mt-4 gap-2"
+                  >
+                    {isResettingPassword ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <KeyRound className="h-4 w-4" />
+                    )}
+                    {isResettingPassword ? 'Enviando...' : 'Cambiar contraseña'}
+                  </Button>
                 </div>
 
                 <div className="flex gap-6">
