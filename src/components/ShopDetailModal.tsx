@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus, Phone, Clock, Share2 } from 'lucide-react';
+import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus, Phone, Clock, Share2, Building2, CheckCircle2, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { StarRating } from '@/components/StarRating';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { ClaimShopModal } from '@/components/ClaimShopModal';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import type { ShopWithStats, Review, ReviewReply } from '@/types/mechanic';
 import { submitReview, fetchShopReviewsWithReplies, checkExistingReview } from '@/services/mechanicService';
+import { checkShopClaimed, checkPendingClaim } from '@/services/claimService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface ShopDetailModalProps {
@@ -23,10 +26,25 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { canShowPrompt, promptInstall, dismissPermanently } = usePWAInstall();
+
+  // Check if shop is claimed
+  const { data: isClaimed = false, isLoading: isClaimedLoading } = useQuery({
+    queryKey: ['shopClaimed', shop?.shop_id],
+    queryFn: () => checkShopClaimed(shop!.shop_id),
+    enabled: !!shop?.shop_id,
+  });
+
+  // Check if user has pending claim
+  const { data: hasPendingClaim = false } = useQuery({
+    queryKey: ['pendingClaim', shop?.shop_id, user?.id],
+    queryFn: () => checkPendingClaim(shop!.shop_id, user!.id),
+    enabled: !!shop?.shop_id && !!user?.id,
+  });
 
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['shopReviewsWithReplies', shop?.shop_id],
@@ -149,6 +167,34 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Claim Status / CTA */}
+          {isClaimedLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Cargando...</span>
+            </div>
+          ) : isClaimed ? (
+            <Badge variant="secondary" className="gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Taller verificado
+            </Badge>
+          ) : hasPendingClaim ? (
+            <Badge variant="outline" className="gap-1.5 border-amber-500 text-amber-600 dark:text-amber-400">
+              <Loader2 className="h-3.5 w-3.5" />
+              Solicitud pendiente de aprobación
+            </Badge>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-orange text-orange hover:bg-orange hover:text-white"
+              onClick={() => setShowClaimModal(true)}
+            >
+              <Building2 className="h-4 w-4" />
+              ¿Este es tu taller? Reclámalo
+            </Button>
+          )}
+
           {/* Rating Summary */}
           <div className="flex items-center gap-3">
             <StarRating value={shop.average_rating} readonly size="md" />
@@ -455,6 +501,15 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
           setShowPWAPrompt(false);
         }}
       />
+
+      {/* Claim Shop Modal */}
+      {shop && (
+        <ClaimShopModal
+          shop={shop}
+          isOpen={showClaimModal}
+          onClose={() => setShowClaimModal(false)}
+        />
+      )}
     </Dialog>
   );
 };
