@@ -6,6 +6,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StarRating } from '@/components/StarRating';
+import { EditShopModal } from '@/components/EditShopModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -16,7 +17,7 @@ import {
   checkIsShopOwner
 } from '@/services/mechanicService';
 import type { ShopWithStats, Review, ReviewReply } from '@/types/mechanic';
-import { Building2, MessageSquare, Send, Edit2, X, Check, Star, MapPin } from 'lucide-react';
+import { Building2, MessageSquare, Send, Edit2, X, Check, Star, MapPin, FileEdit } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -39,6 +40,7 @@ const OwnerDashboard = () => {
   const [replyingToReview, setReplyingToReview] = useState<string | null>(null);
   const [editingReply, setEditingReply] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [editShopModalOpen, setEditShopModalOpen] = useState(false);
 
   // Check if user is a shop owner
   const { data: isOwner, isLoading: ownerCheckLoading } = useQuery({
@@ -261,6 +263,18 @@ const OwnerDashboard = () => {
 
               {ownedShops.map(shop => (
                 <TabsContent key={shop.shop_id} value={shop.shop_id} className="space-y-6">
+                  {/* Edit Shop Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      className="gap-2 border-orange text-orange hover:bg-orange hover:text-white"
+                      onClick={() => setEditShopModalOpen(true)}
+                    >
+                      <FileEdit className="h-4 w-4" />
+                      Solicitar cambios
+                    </Button>
+                  </div>
+
                   {/* Shop Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card>
@@ -458,6 +472,15 @@ const OwnerDashboard = () => {
       </main>
 
       <Footer />
+
+      {/* Edit Shop Modal */}
+      {selectedShop && (
+        <EditShopModal
+          shop={selectedShop}
+          isOpen={editShopModalOpen}
+          onClose={() => setEditShopModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
