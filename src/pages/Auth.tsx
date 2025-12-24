@@ -44,7 +44,7 @@ export default function Auth() {
       const validated = forgotPasswordSchema.parse({ email: formData.email });
       
       const { error } = await supabase.auth.resetPasswordForEmail(validated.email, {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) throw error;
