@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus, Phone, Clock, Share2, Building2, CheckCircle2, Loader2 } from 'lucide-react';
+import { MapPin, ExternalLink, Send, LogIn, MessageSquare, UserPlus, Phone, Clock, Share2, Building2, CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +13,7 @@ import { ClaimShopModal } from '@/components/ClaimShopModal';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import type { ShopWithStats, Review, ReviewReply } from '@/types/mechanic';
 import { submitReview, fetchShopReviewsWithReplies, checkExistingReview } from '@/services/mechanicService';
-import { checkShopClaimed, checkPendingClaim } from '@/services/claimService';
+import { checkShopClaimed, checkPendingClaim, fetchRejectedClaim, deleteRejectedClaim } from '@/services/claimService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface ShopDetailModalProps {
@@ -44,6 +44,29 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
     queryKey: ['pendingClaim', shop?.shop_id, user?.id],
     queryFn: () => checkPendingClaim(shop!.shop_id, user!.id),
     enabled: !!shop?.shop_id && !!user?.id,
+  });
+
+  // Check if user has rejected claim (can resubmit)
+  const { data: rejectedClaim } = useQuery({
+    queryKey: ['rejectedClaim', shop?.shop_id, user?.id],
+    queryFn: () => fetchRejectedClaim(shop!.shop_id, user!.id),
+    enabled: !!shop?.shop_id && !!user?.id,
+  });
+
+  // Mutation to delete rejected claim and allow resubmission
+  const deleteRejectedMutation = useMutation({
+    mutationFn: (claimId: string) => deleteRejectedClaim(claimId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rejectedClaim', shop?.shop_id, user?.id] });
+      setShowClaimModal(true);
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'No se pudo procesar. Intenta de nuevo.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
@@ -183,6 +206,34 @@ export const ShopDetailModal = ({ shop, isOpen, onClose }: ShopDetailModalProps)
               <Loader2 className="h-3.5 w-3.5" />
               Solicitud pendiente de aprobación
             </Badge>
+          ) : rejectedClaim ? (
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-red-800 dark:text-red-200 text-sm">Tu solicitud anterior fue rechazada</p>
+                  {rejectedClaim.admin_notes && (
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                      <strong>Motivo:</strong> {rejectedClaim.admin_notes}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-orange text-orange hover:bg-orange hover:text-white w-full"
+                onClick={() => deleteRejectedMutation.mutate(rejectedClaim.id)}
+                disabled={deleteRejectedMutation.isPending}
+              >
+                {deleteRejectedMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Enviar nueva solicitud
+              </Button>
+            </div>
           ) : (
             <Button
               variant="outline"

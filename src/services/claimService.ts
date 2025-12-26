@@ -60,6 +60,39 @@ export const checkPendingClaim = async (shopId: string, userId: string): Promise
   return !!data;
 };
 
+// Check if user has a rejected claim for this shop (can resubmit)
+export const fetchRejectedClaim = async (shopId: string, userId: string): Promise<ShopClaimRequest | null> => {
+  const { data, error } = await supabase
+    .from('shop_claim_requests')
+    .select('*')
+    .eq('shop_id', shopId)
+    .eq('user_id', userId)
+    .eq('status', 'rejected')
+    .order('updated_at', { ascending: false })
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching rejected claim:', error);
+    return null;
+  }
+
+  return data;
+};
+
+// Delete a rejected claim so user can resubmit
+export const deleteRejectedClaim = async (claimId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('shop_claim_requests')
+    .delete()
+    .eq('id', claimId)
+    .eq('status', 'rejected');
+
+  if (error) {
+    console.error('Error deleting rejected claim:', error);
+    throw error;
+  }
+};
+
 // ==================== CLAIM REQUESTS ====================
 
 export const submitClaimRequest = async (
