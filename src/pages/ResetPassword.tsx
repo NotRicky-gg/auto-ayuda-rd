@@ -1,34 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
 import { useToast } from '@/hooks/use-toast';
+
 import { Loader2, Lock, CheckCircle } from 'lucide-react';
+
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-const resetPasswordSchema = z.object({
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  confirmPassword: z.string().min(6, 'Confirma tu contraseña'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Las contraseñas no coinciden',
-  path: ['confirmPassword'],
-});
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+    confirmPassword: z.string().min(6, 'Confirma tu contraseña'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 const ResetPassword = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isValidSession, setIsValidSession] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
@@ -38,37 +44,51 @@ const ResetPassword = () => {
     },
   });
 
+  /**
+   * IMPORTANT:
+   * We must wait until Supabase fully hydrates the recovery session
+   * from the URL hash before allowing password update.
+   */
   useEffect(() => {
-    // Check if user arrived via password reset link
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Check URL hash for recovery token (Supabase adds it as hash fragment)
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const type = hashParams.get('type');
-      
-      if (type === 'recovery' || session) {
-        setIsValidSession(true);
+    let mounted = true;
+
+    const hydrateSession = async () => {
+      const { data } = await supabase.auth.getSession();
+
+      if (data?.session && mounted) {
+        setSessionReady(true);
+        setCheckingSession(false);
       }
-      setCheckingSession(false);
     };
 
-    checkSession();
+    hydrateSession();
 
-    // Listen for auth state changes (recovery event)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsValidSession(true);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session && mounted) {
+        setSessionReady(true);
         setCheckingSession(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true);
+
     try {
+      // Double-check session existence before updating password
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (!sessionData?.session) {
+        throw new Error('El enlace de recuperación es inválido o ha expirado.');
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: data.password,
       });
@@ -76,15 +96,19 @@ const ResetPassword = () => {
       if (error) throw error;
 
       setIsSuccess(true);
+
       toast({
         title: '¡Contraseña actualizada!',
         description: 'Tu contraseña ha sido cambiada exitosamente.',
       });
 
-      // Redirect after a short delay
+      // Optional: sign out to force clean login
+      await supabase.auth.signOut();
+
       setTimeout(() => {
-        navigate('/');
+        navigate('/auth');
       }, 2000);
+
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -96,6 +120,7 @@ const ResetPassword = () => {
     }
   };
 
+  // Loading state while Supabase hydrates session
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -104,18 +129,19 @@ const ResetPassword = () => {
     );
   }
 
-  if (!isValidSession) {
+  // Invalid or expired link
+  if (!sessionReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-destructive">Enlace inválido</CardTitle>
             <CardDescription>
-              Este enlace de restablecimiento de contraseña no es válido o ha expirado.
+              Este enlace de restablecimiento no es válido o ha expirado.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate('/auth')} className="w-full">
+            <Button className="w-full" onClick={() => navigate('/auth')}>
               Volver al inicio de sesión
             </Button>
           </CardContent>
@@ -124,15 +150,16 @@ const ResetPassword = () => {
     );
   }
 
+  // Success state
   if (isSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <CardTitle>¡Contraseña actualizada!</CardTitle>
             <CardDescription>
-              Serás redirigido a la página principal en unos segundos...
+              Serás redirigido al inicio de sesión en unos segundos...
             </CardDescription>
           </CardHeader>
         </Card>
@@ -140,6 +167,7 @@ const ResetPassword = () => {
     );
   }
 
+  // Reset form
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -148,9 +176,7 @@ const ResetPassword = () => {
             <Lock className="h-8 w-8 text-primary" />
           </div>
           <CardTitle>Restablecer contraseña</CardTitle>
-          <CardDescription>
-            Ingresa tu nueva contraseña
-          </CardDescription>
+          <CardDescription>Ingresa tu nueva contraseña</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -162,16 +188,13 @@ const ResetPassword = () => {
                   <FormItem>
                     <FormLabel>Nueva contraseña</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="confirmPassword"
@@ -179,16 +202,13 @@ const ResetPassword = () => {
                   <FormItem>
                     <FormLabel>Confirmar contraseña</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
